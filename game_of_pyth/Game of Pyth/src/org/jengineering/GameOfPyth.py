@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import time
 
 # Copyright 2016 Dirk Toewe
 #
@@ -149,26 +150,69 @@ class Board(object):
 
   def _indexOnBoard(self,row,col):
     return row,col
-
-  def increment(self):
+  
+  def _calculateNextChangesIntitially(self):
     '''
-    Advances the Game of Life simulation by a single tick (time step).
+    Returns a set of the cells that are going to change during the first time step increment.
     '''
-    # TODO: only consider cells that changes last turn and their neighbors (should improve performance on spacefillers)
     counter = Counter(
       self._indexOnBoard(r,c)
       for row,col in self
       for r in range(row-1,row+2)
       for c in range(col-1,col+2)
     )
-    for (row,col),neighbors in counter.iteritems():
-      alive = self[row,col]
+    def changes(cell,neighbors):
+      alive = self[cell]
+      aliveTomorrow = alive
       neighbors -= alive 
       if alive:
-        if neighbors  < 2: alive = False
-        if neighbors  > 3: alive = False
-      elif neighbors == 3: alive = True
-      self[row,col] = alive
+        if neighbors  < 2: aliveTomorrow = False
+        if neighbors  > 3: aliveTomorrow = False
+      elif neighbors == 3: aliveTomorrow = True
+      return alive ^ aliveTomorrow
+    return { x for x,n in counter.iteritems() if changes(x,n) }
+
+  def _calculateNextChanges(self):
+    '''
+    Returns a set of the cells that are going to change during the next time step increment.
+    '''
+    def changes(row,col):
+      alive = self[row,col]
+      aliveTomorrow = alive
+      neighbors = -alive + sum(
+        self[r,c]
+        for r in range(row-1,row+2)
+        for c in range(col-1,col+2)
+      )
+      if alive:
+        if neighbors  < 2: aliveTomorrow = False
+        if neighbors  > 3: aliveTomorrow = False
+      elif neighbors == 3: aliveTomorrow = True
+      return alive ^ aliveTomorrow
+    return {
+      self._indexOnBoard(r,c)  
+      for row,col in self._nextChanges
+      for r in range(row-1,row+2)
+      for c in range(col-1,col+2)
+      if changes(r,c)
+    }
+    
+#     self.__previousChanges = self.__changes # <- could be used to redraw more cleverly
+#     # TODO: only consider cells that changes last turn and their neighbors (should improve performance on spacefillers)
+#     counter = Counter(
+#       self._indexOnBoard(r,c)
+#       for row,col in self
+#       for r in range(row-1,row+2)
+#       for c in range(col-1,col+2)
+#     )
+#     for (row,col),neighbors in counter.iteritems():
+#       alive = self[row,col]
+#       neighbors -= alive 
+#       if alive:
+#         if neighbors  < 2: alive = False
+#         if neighbors  > 3: alive = False
+#       elif neighbors == 3: alive = True
+#       self[row,col] = alive
 
 class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
 
@@ -176,7 +220,7 @@ class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
     '''
     Creates a new dense Game of Life board. The constructor expects either 1 (list[list[bool]]), 2 (int,int) or 3 (int,int,(int,int) -> bool) arguments.
     '''
-    keywords = set( ('rowOff','colOff') )
+    keywords = {'rowOff','colOff'}
     for key in kwargs:
       if not keywords:
         raise Exception( 'Illegal keyword argument: "%(key)s". Only %(keywords)s allowed.' % locals() )
@@ -209,6 +253,7 @@ class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
           for c in range(self.nCols)
         ] for r in range(self.nRows)
       ]
+    self._nextChanges = self._calculateNextChangesIntitially()
 
   @property
   def rowOff(self): return self.__rowOff
@@ -302,6 +347,16 @@ class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
     if 0 > col: col = self.nCols - col
     return row,col
 
+  def increment(self):
+    '''
+    Advances the Game of Life simulation by a single tick (time step).
+    '''
+    if not hasattr(self,'_nextChanges'):
+      self._nextChanges = self._calculateNextChangesIntitially()
+    for cell in self._nextChanges:
+      self[cell] ^= True
+    self._nextChanges = self._calculateNextChanges()
+
   def __iter__(self):
     '''
     Returns an iterator over the row and column indices of all living cells as an iterator[(int,int)].
@@ -320,7 +375,7 @@ class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
       iCols %= self.nCols
       self.__cells[iRows][iCols] = val
     else:
-      raise('Only __setitem__(self,(int,int)) implemented yet.')      
+      raise Exception('Only __setitem__(self,(int,int)) implemented yet.')      
 
   def __copy__(self):
     return Board(self.__cells)
@@ -381,8 +436,8 @@ class SparseBoard(Board):
       if not isinstance(row,int): raise Exception( 'Invalid key/enty: %(x)s.' % locals() )
       if not isinstance(col,int): raise Exception( 'Invalid key/enty: %(x)s.' % locals() )
       return (row,col)
-    if   isinstance(vals,dict    ): self.__cells = set( map(checkEntry, filter(lambda x: vals[x], vals) ) )
-    elif isinstance(vals,Iterable): self.__cells = set( map(checkEntry, vals) )
+    if   isinstance(vals,dict    ): self.__cells = { checkEntry(x) for x in filter(lambda x: vals[x], vals) }
+    elif isinstance(vals,Iterable): self.__cells = { checkEntry(x) for x in map(checkEntry, vals) }
     else:
       raise Exception('Invalid argument.')
 
@@ -430,19 +485,28 @@ class SparseBoard(Board):
       filter(lambda (r,c): (r in iRows) and (c in iCols), self)
     )
 
+  def increment(self):
+    '''
+    Advances the Game of Life simulation by a single tick (time step).
+    '''
+    if not hasattr(self,'_nextChanges'):
+      self._nextChanges = self._calculateNextChangesIntitially()
+    self.__cells ^= self._nextChanges
+    self._nextChanges = self._calculateNextChanges()
+
   def __iter__(self):
     '''
     Returns an iterator over the row and column indices of all living cells as an iterator[(int,int)].
     '''
     return iter(self.__cells)
 
-  def __setitem__(self, slc, val ):
+  def __setitem__(self, slc, val):
     iRows, iCols = slc
     if isinstance(iRows,int) and isinstance(iCols,int):
       if val: self.__cells.    add( (iRows,iCols) )
       else  : self.__cells.discard( (iRows,iCols) )
     else:
-      raise('Only __setitem__(self,(int,int)) implemented yet.')      
+      raise Exception('Only __setitem__(self,(int,int)) implemented yet.')      
 
   def __copy__(self):
     return Board(self.__cells)
