@@ -29,7 +29,7 @@ from PyQt4.QtGui import QWidget, QPushButton, QPainter, QColor, QLabel
 from _abcoll import Iterable
 from copy import copy
 import re
-from collections import defaultdict
+from collections import Counter
 
 
 class Widget(QWidget):
@@ -147,13 +147,21 @@ class Board(object):
   An abstract game of life board consisting of cells addressable by two dimensional integer indices.
   '''
 
+  def _indexOnBoard(self,row,col):
+    return row,col
+
   def increment(self):
     '''
     Advances the Game of Life simulation by a single tick (time step).
     '''
     # TODO: only consider cells that changes last turn and their neighbors (should improve performance on spacefillers)
-    neighborCounts = self._neighborCounts()
-    for (row,col),neighbors in neighborCounts.iteritems():
+    counter = Counter(
+      self._indexOnBoard(r,c)
+      for row,col in self
+      for r in range(row-1,row+2)
+      for c in range(col-1,col+2)
+    )
+    for (row,col),neighbors in counter.iteritems():
       alive = self[row,col]
       neighbors -= alive 
       if alive:
@@ -287,22 +295,12 @@ class DenseBoard(Board): # namedtuple('Board','nRows, nCols, cells')
       ( self[row,col] for col in iCols ) for row in iRows
     )
 
-  def _neighborCounts(self):
-    neighborCount = {}
-    def limit(i,size):
-      i %= size
-      if i < 0: i = len-i 
-      return i
-    for row,col in self:
-      for r in range(row-1,row+2):
-        for c in range(col-1,col+2):
-          r = limit(r,self.nRows)
-          c = limit(c,self.nCols)
-          if not (r,c) in neighborCount:
-            neighborCount[r,c] = 1
-          else:
-            neighborCount[r,c] += 1
-    return neighborCount
+  def _indexOnBoard(self,row,col):
+    row %= self.nRows
+    col %= self.nCols
+    if 0 > row: row = self.nRows - row
+    if 0 > col: col = self.nCols - col
+    return row,col
 
   def __iter__(self):
     '''
@@ -388,14 +386,6 @@ class SparseBoard(Board):
     else:
       raise Exception('Invalid argument.')
 
-  def _neighborCounts(self):
-    neighborCount = defaultdict(lambda: 0)
-    for row,col in self:
-      for r in range(row-1,row+2):
-        for c in range(col-1,col+2):
-          neighborCount[r,c] += 1
-    return neighborCount
-
   def __getitem__(self,slc): # TODO allow toroidal access outside the boundaries
     '''
     If the input argument is of type (slice,slice), retrieves the specified subregion of this board as a new Board.
@@ -444,8 +434,7 @@ class SparseBoard(Board):
     '''
     Returns an iterator over the row and column indices of all living cells as an iterator[(int,int)].
     '''
-    for x in self.__cells:
-      yield x
+    return iter(self.__cells)
 
   def __setitem__(self, slc, val ):
     iRows, iCols = slc

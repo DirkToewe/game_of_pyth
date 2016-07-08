@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from random import random
 
 # Copyright 2016 Dirk Toewe
 #
@@ -58,7 +57,7 @@ if __name__ == '__main__':
 #           [1,1,1,1,1,1,1,1]
 #         ]))
 #       )
-      GameOfPyth.DenseBoard(56,56,lambda r,c: random() < 0.1),
+#       GameOfPyth.DenseBoard(56,56,lambda r,c: random() < 0.1),
 #       GameOfPyth.DenseBoard(
 #         [[0]*18]*4 +
 #         [[0]*5+[1,1,1,1,1,1,1,1]+[0]*5,
@@ -104,6 +103,7 @@ if __name__ == '__main__':
 #       ]))
 #     )
 #     GameOfPyth.SparseBoard_load('data/switchengine.rle')
+    GameOfPyth.SparseBoard_load('data/spacefiller.rle')
 #     GameOfPyth.DenseBoard(256,256,
 #       set( GameOfPyth.SparseBoard_load('data/spacefiller.rle') ),
 #       rowOff =13-128, colOff=24-128
