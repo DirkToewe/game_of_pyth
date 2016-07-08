@@ -44,7 +44,7 @@ SparseBoard
 ```SparseBoard``` has a potentially infinite number of cells. It can be created from a ```set[(int,int)]```:
 
 ```python
-board = GameOfPyth.DenseBoard(
+board = GameOfPyth.SparseBoard(
   set([(0,1), (3,3), (2,1), (1,0), (0,3), (3,4), (2,4), (3,5)])
 )
 ```
