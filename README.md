@@ -3,6 +3,8 @@ Game of Pyth(on)
 
 Game of Pyth is my first Python project. It is an implementation of [Convay's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life).
 
+![Screenshot of Game of Pyth(on)](https://github.com/DirkToewe/game_of_pyth/blob/master/game_of_python.png)
+
 Board
 =====
 
