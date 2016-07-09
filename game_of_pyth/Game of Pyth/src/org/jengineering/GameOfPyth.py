@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import time
-
 # Copyright 2016 Dirk Toewe
 #
 # This file is part of Game of Pyth.
@@ -21,16 +19,18 @@ import time
 '''
 Created on Jul 4, 2016
 
-@author: dtitx
+@author: Dirk Toewe
 '''
+
 from PyQt4 import QtCore
 from PyQt4.Qt import QGridLayout, QSlider, Qt
 from PyQt4.QtCore import QTimer
 from PyQt4.QtGui import QWidget, QPushButton, QPainter, QColor, QLabel
 from _abcoll import Iterable
+from collections import Counter
 from copy import copy
 import re
-from collections import Counter
+import time
 
 
 class Widget(QWidget):
