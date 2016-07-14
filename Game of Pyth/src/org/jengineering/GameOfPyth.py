@@ -26,8 +26,8 @@ from PyQt4 import QtCore
 from PyQt4.Qt import QGridLayout, QSlider, Qt
 from PyQt4.QtCore import QTimer
 from PyQt4.QtGui import QWidget, QPushButton, QPainter, QColor, QLabel
-from _abcoll import Iterable
 from collections import Counter
+from collections import Iterable
 from copy import copy
 import re
 import time
@@ -170,7 +170,7 @@ class Board(object):
         if neighbors  > 3: aliveTomorrow = False
       elif neighbors == 3: aliveTomorrow = True
       return alive ^ aliveTomorrow
-    return { x for x,n in counter.iteritems() if changes(x,n) }
+    return { x for x,n in counter.items() if changes(x,n) }
 
   def _calculateNextChanges(self):
     '''
@@ -482,7 +482,7 @@ class SparseBoard(Board):
     # }
     # RETURN SUB-BOARD
     return SparseBoard(
-      filter(lambda (r,c): (r in iRows) and (c in iCols), self)
+      filter(lambda r,c: (r in iRows) and (c in iCols), self)
     )
 
   def increment(self):
